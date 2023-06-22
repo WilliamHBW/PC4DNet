@@ -78,8 +78,8 @@ class AutoEncoder(torch.nn.Module):
 
         self.spatial_encoder = Feature_extract(dscale=2, channels=[1,16,32,64])
         self.spatial_decoder = Recons(uscale=2, channels=[64,32,16])
-        self.temporal_encoder = Temporal_Encoder(dscale=[2,2,2,1], channels=[64,32,8], temporal_kernel_size=[2,2,2,self.frame_num])
-        self.temporal_decoder = Temporal_Decoder(uscale=[2,2,2,1], channels=[8,32,64], temporal_kernel_size=[2,2,2,self.frame_num])
+        self.temporal_encoder = Temporal_Encoder(dscale=[2,2,2,1], channels=[64,32,8], temporal_kernel_size=[2,2,2,3])
+        self.temporal_decoder = Temporal_Decoder(uscale=[2,2,2,1], channels=[8,32,64], temporal_kernel_size=[2,2,2,3])
         self.entropy_bottleneck = EntropyBottleneck(8)
 
     def get_likelihood(self, data, quantize_mode, entropy_model):

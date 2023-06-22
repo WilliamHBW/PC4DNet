@@ -37,7 +37,7 @@ def generate_train_dataset(cfg_dic):
         files = os.listdir(readdir)
         files.sort()
         assert(frame_num<=len(files))
-        for i in tqdm(range(frame_num)):
+        for i in tqdm(range(frame_num - group_num + 1)):
             frame_count = frame_count + 1
             readpath = os.path.join(readdir,files[i])
             plydata = o3d.io.read_point_cloud(readpath)
@@ -45,13 +45,15 @@ def generate_train_dataset(cfg_dic):
             #decrease bit precision from 11 to 8
             points = np.asarray(plydata.points).astype(np.int32)
             if(cfg_dic['quant_bit']=='9'):
-                points_9bit = np.round(points / 4)
+                points_quantized = np.round(points / 4)
             elif(cfg_dic['quant_bit']=='8'):
-                points_9bit = np.round(points / 8)
+                points_quantized = np.round(points / 8)
+            elif(cfg_dic['quant_bit']=='7'):
+                points_quantized = np.round(points / 16)
             else:
-                points_9bit = np.round(points / 8)
+                points_quantized = np.round(points / 1)
             
-            points_geo = np.unique(points_9bit, axis=0)
+            points_geo = np.unique(points_quantized, axis=0)
             frame_cache.append(points_geo)
 
             #write geo ply
@@ -59,6 +61,7 @@ def generate_train_dataset(cfg_dic):
                 if(frame_count>=group_num):
                     outname = seq + '_' + str(i) + '_' + str(group_num) + '.h5'
                     outpath = os.path.join(outdatadir, outname)
+                    assert(len(frame_cache)==group_num)
                     write_h5_geo(outpath, frame_cache)
                     frame_cache = frame_cache[1:]
             elif(cfg_dic['out_filetype']=='ply'):
@@ -73,10 +76,10 @@ if  __name__ == '__main__':
     cfg_dic['seq_name'] = 'exercise_vox11 basketball_player_vox11 dancer_vox11 model_vox11'
     #cfg_dic['seq_name'] = 'basketball_player_vox11'
     cfg_dic['data_dir'] = '/home/mmspg/Desktop/test_files/Owlii'
-    cfg_dic['cfg_name'] = 'train1'
+    cfg_dic['cfg_name'] = 'train2'
     cfg_dic['out_filetype'] = 'h5'
-    cfg_dic['frame_num'] = '599'
-    cfg_dic['group_num'] = '4' #frame group length
+    cfg_dic['frame_num'] = '600'
+    cfg_dic['group_num'] = '16' #frame group length
     cfg_dic['static_pcc'] = 'PCGCv2'
-    cfg_dic['quant_bit'] = '9' #downsample precision
+    cfg_dic['quant_bit'] = '7' #downsample precision
     generate_train_dataset(cfg_dic)
