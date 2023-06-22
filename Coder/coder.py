@@ -60,62 +60,59 @@ class FeatureCoder():
         return feats
 
 class Coder():
-    def __init__(self, model, filename):
+    def __init__(self, model, filename, frame_num):
         self.model = model 
         self.filename = filename
+        self.frame_num = frame_num
         self.coordinate_coder = CoordinateCoder(filename)
-        self.feature_coder_sf = FeatureCoder(self.filename, model.entropy_bottleneck_sf)
-        self.feature_coder_res = FeatureCoder(self.filename, model.entropy_bottleneck_res)
-        self.down_conv = ME.MinkowskiConvolution(
-            in_channels = 8,
-            out_channels = 8,
-            kernel_size = 2,
-            stride = 2,
-            bias = True,
-            dimension = 3
-        )
-    
+        self.feature_coder = FeatureCoder(self.filename, model.entropy_bottleneck)
+
     @torch.no_grad()
-    def encode(self, x, x_ref, resfix='', sffix=''):
+    def encode(self, x, resfix=''):
         # Encoder
-        y = self.model.feature_extract(x)
-        y_ref = self.model.feature_extract(x_ref)
-        #visualize_pc_features(y[0],0,'target')
-        #visualize_pc_features(y_ref[0],0,'ref')
-        res,_,_,_,sf_q,_,_,_ = self.model.encoder(x, y, y_ref, training=False)
-        res_ = sort_spare_tensor(res)
-        sf_q = sort_by_coor_sum(sf_q, 16)
-        num_points = [len(ground_truth) for ground_truth in y[1:] + [x]]
+        y, _,_, nums_list_space, nums_list_time = self.model.encoder(x, training=False)
+        y_ = sort_sparce_tensor(y)
+
+        num_points = nums_list_time
+        for i in range(self.frame_num):
+            num_points += nums_list_space[i]
         with open(self.filename+resfix+'_num_points.bin', 'wb') as f:
             f.write(np.array(num_points, dtype=np.int32).tobytes())
-        self.feature_coder_res.encode(res_.F, postfix=resfix)
-        self.coordinate_coder.encode((res_.C//res_.tensor_stride[0]).detach().cpu()[:,1:], postfix=resfix)
-        self.feature_coder_sf.encode(sf_q.F, postfix=sffix)
-        return sf_q, res_
+
+        self.feature_coder.encode(y_.F, postfix=resfix)
+        for i in range(self.frame_num):
+            coord = y_.C[y_.C[:,-1]==i]
+            self.coordinate_coder.encode((coord[:,1:-1]//y_.tensor_stride[0]).detach().cpu(), postfix=resfix+'_'+str(i))
+        
+        return
     
     @torch.no_grad()
-    def decode(self, x_ref, x, resfix='', sffix='', rho=1):
-        y_ref = self.model.feature_extract(x_ref)
-        y = self.model.feature_extract(x)
+    def decode(self, resfix='', rho=1):
         # decode coords
-        res_C = self.coordinate_coder.decode(postfix=resfix)
-        res_C = torch.cat((torch.zeros((len(res_C),1)).int(), torch.tensor(res_C).int()),dim=-1)
-        indices_sort = np.argsort(array2vector(res_C, res_C.max()+1))
-        res_C = res_C[indices_sort]
+        y_C = torch.zeros((1,5))
+        for i in range(self.frame_num):
+            y_C_i = self.coordinate_coder.decode(postfix=resfix+'_'+str(i))
+            y_C_i = torch.tensor(y_C_i) * 8
+            y_C_i = torch.cat((torch.zeros((y_C_i.shape[0],1)).int(), y_C_i.int()),dim=-1)
+            y_C_i = torch.hstack((y_C_i, (torch.zeros((y_C_i.shape[0],1))+i))).int()
+            indices_sort = np.argsort(array2vector(y_C_i, y_C_i.max()+1))
+            y_C_i = y_C_i[indices_sort]
+            y_C = torch.vstack((y_C, y_C_i))
+        y_C = y_C[1:]
 
-        res_F = self.feature_coder_res.decode(postfix=resfix)
-        res = ME.SparseTensor(features=res_F, coordinates=res_C*8, tensor_stride=8, device=device)
+        y_F = self.feature_coder.decode(postfix=resfix)
+        y = ME.SparseTensor(features=y_F, coordinates=y_C.int(), tensor_stride=[8,8,8,1], device=device)
 
         with open(self.filename+resfix+'_num_points.bin', 'rb') as fin:
-            num_points = np.frombuffer(fin.read(4*3), dtype=np.int32).tolist()
+            num_points = np.frombuffer(fin.read(4*(1+2*self.frame_num)), dtype=np.int32).tolist()
             num_points[-1] = int(rho * num_points[-1])# update
             num_points = [[num] for num in num_points]
-        
-        sf_F = self.feature_coder_sf.decode(postfix=sffix)
-        down_model = self.down_conv.to(device)
-        y4 = down_model(res)
-        sf = ME.SparseTensor(features=sf_F, coordinate_map_key=y4.coordinate_map_key, coordinate_manager=y4.coordinate_manager, device=device)
-        
-        _,_,out = self.model.decoder(y_ref[0], sf, res, nums_list=num_points, ground_truth_list=[None]*3, training=False)
+        nums_list_time = [num_points[0]]
+        nums_list_space = []
+        for i in range(self.frame_num):
+            nums_list_space_i = num_points[1+i*2:3+i*2]
+            nums_list_space.append(nums_list_space_i)
+
+        _,_,out = self.model.decoder(y, nums_list_space, nums_list_time, ground_truth_list_space=[[None]*2]*self.frame_num, ground_truth_list_time=[None], training=False)
 
         return out

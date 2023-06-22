@@ -39,30 +39,19 @@ def istopk(data, nums, rho=1.0):
 
     return mask.bool().to(data.device)
 
-def sort_spare_tensor(sparse_tensor):
+def sort_sparce_tensor(sparse_tensor):
     """ Sort points in sparse tensor according to their coordinates.
     """
-    indices_sort = np.argsort(array2vector(sparse_tensor.C.cpu(), 
-                                           sparse_tensor.C.cpu().max()+1))
+    coord = sparse_tensor.C
+    coord = coord[:,[1,2,3,4,0]]#specially designed to keep the temporal order
+    indices_sort = np.argsort(array2vector(coord.cpu(), 
+                                           coord.cpu().max()+1))
     sparse_tensor_sort = ME.SparseTensor(features=sparse_tensor.F[indices_sort], 
                                          coordinates=sparse_tensor.C[indices_sort],
-                                         tensor_stride=sparse_tensor.tensor_stride[0], 
+                                         tensor_stride=sparse_tensor.tensor_stride, 
                                          device=sparse_tensor.device)
 
     return sparse_tensor_sort
-
-
-def sort_by_coor_sum(f, stride):
-    xyz, feature = f.C, f.F
-    maximum = xyz.max() + 1
-    coor_sum = xyz[:, 0] * maximum * maximum * maximum \
-               + xyz[:, 1] * maximum * maximum \
-               + xyz[:, 2] * maximum \
-               + xyz[:, 3]
-    _, idx = coor_sum.sort()
-    xyz_, feature_ = xyz[idx], feature[idx]
-    f_ = ME.SparseTensor(feature_, coordinates=xyz_, tensor_stride=stride, device=f.device)
-    return f_
 
 def index_points(points, idx):
     """
@@ -91,26 +80,3 @@ def index_by_channel(point1, idx, K=3):
     knn_point1 = index_points(point1_, idx_).reshape(B, C, N2, K).transpose(1, 2)
     # knn_point1 = point1_[np.arange(B * C), idx_].transpose(1, 2)
     return knn_point1
-
-
-def get_target_by_sp_tensor(out, target_sp_tensor):
-    with torch.no_grad():
-        def ravel_multi_index(coords, step):
-            coords = coords.long()
-            step = step.long()
-            coords_sum = coords[:, 0] \
-                         + coords[:, 1] * step \
-                         + coords[:, 2] * step * step \
-                         + coords[:, 3] * step * step * step
-            return coords_sum
-
-        step = max(out.C.max(), target_sp_tensor.C.max()) + 1
-
-        out_sp_tensor_coords_1d = ravel_multi_index(out.C, step)
-        in_sp_tensor_coords_1d = ravel_multi_index(target_sp_tensor.C, step)
-
-        # test whether each element of a 1-D array is also present in a second array.
-        target = torch.isin(out_sp_tensor_coords_1d, in_sp_tensor_coords_1d)
-
-    # return torch.Tensor(target).bool()
-    return target

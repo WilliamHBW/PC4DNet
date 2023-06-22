@@ -136,7 +136,7 @@ class AutoEncoder(torch.nn.Module):
             y_space_coord = y_space.C[y_space.C[:,-1]==i]
             y_space_feat = y_space.F[y_space.C[:,-1]==i]
             y_space_i = ME.SparseTensor(features=y_space_feat, coordinates=y_space_coord[:,:-1].contiguous(), tensor_stride=y_space.tensor_stride[0], device=device)
-            out_cls, out = self.spatial_decoder(y_space_i, nums_list_space[i], ground_truth_list_space[i])
+            out_cls, out = self.spatial_decoder(y_space_i, nums_list_space[i], ground_truth_list_space[i], training)
 
             x_cls.append(out_cls)
             x.append(out)
@@ -146,7 +146,8 @@ class AutoEncoder(torch.nn.Module):
     def forward(self, x, training=True):
         y, ground_truth_list_space, ground_truth_list_time, nums_list_space, nums_list_time = self.encoder(x)
 
-        y_q, y_likelihood = self.get_likelihood(y, quantize_mode="noise" if training else "symbols", entropy_model=self.entropy_bottleneck)
+        y_ = sort_sparce_tensor(y)
+        y_q, y_likelihood = self.get_likelihood(y_, quantize_mode="noise" if training else "symbols", entropy_model=self.entropy_bottleneck)
 
         x_out_cls_list_time, x_out_cls_list_space, x_out = self.decoder(y_q, nums_list_space, nums_list_time, ground_truth_list_space, ground_truth_list_time, training) 
 

@@ -22,7 +22,9 @@ use Owlii to generate the training dataset.
 - checkpoints will be at `./Checkpoints`.
 
 ## Testing
-- haven't finished yet.
+- modify `test_config.cfg`
+- run `python test.py --config=test_config.cfg` for testing.
+- results will be stored at `./Results/`.
 
 # TODO List
-- finish test code.
+- improve the performance.
