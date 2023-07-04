@@ -133,14 +133,10 @@ class Trainer():
     @torch.no_grad()
     def valid(self, dataloader, main_tag='Test'):
         self.logger.info('Testing Files length:' + str(len(dataloader)))
-        for batch_step, (coords, feats) in enumerate(tqdm(dataloader)):
+        for batch_step, coords in enumerate(tqdm(dataloader)):
             #data
-            x = []
-            x_len = 0
-            for i in range(args.frame_num):
-                x_i = ME.SparseTensor(features=feats[str(i)].float(), coordinates=coords[str(i)].int(), device=device)
-                x_len += x_i.C.shape[0]
-                x.append(x_i)
+            x = coords.to(device)
+            x_len = coords.shape[0]
             
             #forward
             out_set = self.model(x, training=True)
@@ -206,18 +202,14 @@ class Trainer():
         # dataloader
         self.logger.info('Training Files length:' + str(len(dataloader)))
         
-        for batch_step, (coords, feats) in enumerate(tqdm(dataloader)):
+        for batch_step, coords in enumerate(tqdm(dataloader)):
             #init
             global_step=self.epoch*len(dataloader)+batch_step
             self.optimizer.zero_grad()
 
             #data
-            x = []
-            x_len = 0
-            for i in range(args.frame_num):
-                x_i = ME.SparseTensor(features=feats[str(i)].float(), coordinates=coords[str(i)].int(), device=device)
-                x_len += x_i.C.shape[0]
-                x.append(x_i)
+            x = coords.to(device)
+            x_len = coords.shape[0]
             
             #forward
             out_set = self.model(x, training=True)

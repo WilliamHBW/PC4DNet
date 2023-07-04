@@ -39,26 +39,9 @@ class InfSampler(Sampler):
 
 
 def collate_pointcloud_fn(list_data):
-    coords_batch = {}
-    feats_batch = {}
-    num_removed = 0
-    num_frame = len(list_data[0])
-    for i in range(num_frame):
-        new_list_data_coords = []
-        new_list_data_feats = []
-        for data in list_data:
-            if data is not None:
-                new_list_data_coords.append(data[str(i)][0])
-                new_list_data_feats.append(data[str(i)][1])
-            else:
-                num_removed += 1
-        if(len(data)==num_removed):
-            raise ValueError('No data in the batch')
-        coords_batch_, feats_batch_ = ME.utils.sparse_collate(new_list_data_coords, new_list_data_feats)
-        coords_batch.update({str(i): coords_batch_})
-        feats_batch.update({str(i): feats_batch_})
+    coords_batch = ME.utils.batched_coordinates(list_data)
 
-    return coords_batch, feats_batch
+    return coords_batch
 
 class PCDataset(Dataset):
     def __init__(self, filedir, frame_num=2, format='h5', mode='train', size_ratio=1):
@@ -90,14 +73,8 @@ class PCDataset(Dataset):
             if self.format=='h5':
                 coords_ = []
                 filepath = os.path.join(self.filedir, self.files[idx])
-                coords_i = read_h5_geo(filepath, self.frame_num)
-                for i in range(self.frame_num):
-                    coords_.append(np.array(coords_i[i]))
-            tensor = {}
-            for i in range(self.frame_num):
-                feats = np.expand_dims(np.ones(coords_[i].shape[0]),1).astype('float32')
-                coords = np.hstack((coords_[i], np.zeros((coords_[i].shape[0],1))+i)).astype('int')
-                tensor.update({str(i):[coords, feats]})
+                coords_ = read_h5_geo(filepath, self.frame_num)
+            tensor = coords_
             #cache
             self.cache[idx] = tensor
             cache_percent = int((len(self.cache) / len(self)) * 100)

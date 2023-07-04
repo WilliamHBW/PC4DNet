@@ -21,21 +21,16 @@ def read_ply_ascii_geo(filedir):
 
 def read_h5_geo(filedir, frame_num):
     pc = h5py.File(filedir, 'r')
-    coords = []
-    for i in range(frame_num):
-        coord_name = 'data_'+str(i)
-        coord = pc.get(coord_name)[()]
-        coords.append(coord)
+    coord = pc.get('data')[()]
 
-    return coords
+    return coord
 
 def write_h5_geo(filedir, coords_list):
     frame_num = len(coords_list)
+    coords = np.concatenate(coords_list)
     with h5py.File(filedir, 'w') as h:
-        for i in range(frame_num):
-            coords = coords_list[i]
-            data = coords.astype('short')
-            h.create_dataset('data_'+str(i), data=data, shape=data.shape)
+        data = coords.astype('short')
+        h.create_dataset('data', data=data, shape=data.shape)
 
     return
 

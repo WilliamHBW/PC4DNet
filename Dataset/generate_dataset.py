@@ -54,6 +54,7 @@ def generate_train_dataset(cfg_dic):
                 points_quantized = np.round(points / 1)
             
             points_geo = np.unique(points_quantized, axis=0)
+            points_geo = np.hstack((points_geo, np.zeros((points_geo.shape[0],1))+(frame_count-1)%group_num))
             frame_cache.append(points_geo)
 
             #write geo ply
@@ -76,10 +77,10 @@ if  __name__ == '__main__':
     cfg_dic['seq_name'] = 'exercise_vox11 basketball_player_vox11 dancer_vox11 model_vox11'
     #cfg_dic['seq_name'] = 'basketball_player_vox11'
     cfg_dic['data_dir'] = '/home/mmspg/Desktop/test_files/Owlii'
-    cfg_dic['cfg_name'] = 'train2'
+    cfg_dic['cfg_name'] = 'train3'
     cfg_dic['out_filetype'] = 'h5'
     cfg_dic['frame_num'] = '600'
-    cfg_dic['group_num'] = '16' #frame group length
+    cfg_dic['group_num'] = '8' #frame group length
     cfg_dic['static_pcc'] = 'PCGCv2'
-    cfg_dic['quant_bit'] = '7' #downsample precision
+    cfg_dic['quant_bit'] = '9' #downsample precision
     generate_train_dataset(cfg_dic)
