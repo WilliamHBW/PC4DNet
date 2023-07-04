@@ -281,12 +281,14 @@ class DownSample_4D(torch.nn.Module):
             bias = True,
             dimension = 4
         )
+        kernel_generator = ME.KernelGenerator(kernel_size=temporal_kernel_size,stride=scale,region_type=ME.RegionType.HYPER_CROSS,dimension=4)
         self.down0 = ME.MinkowskiConvolution(
             in_channels = oc0,
             out_channels = oc1,
             kernel_size = temporal_kernel_size,
             stride = scale,
             bias = True,
+            kernel_generator = kernel_generator,
             dimension = 4
         )
         self.block0 = make_layer(
@@ -305,12 +307,14 @@ class DownSample_4D(torch.nn.Module):
 class UpSample_4D(torch.nn.Module):
     def __init__(self,ic0,oc0,oc1,scale,temporal_kernel_size):
         super().__init__()
+        kernel_generator = ME.KernelGenerator(kernel_size=temporal_kernel_size,stride=scale,region_type=ME.RegionType.HYPER_CROSS,dimension=4)
         self.up0 = ME.MinkowskiGenerativeConvolutionTranspose(
             in_channels = ic0,
             out_channels = oc0,
             kernel_size = temporal_kernel_size,
             stride = scale,
             bias = True,
+            kernel_generator = kernel_generator,
             dimension = 4
         )
         self.conv0 = ME.MinkowskiConvolution(

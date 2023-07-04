@@ -9,6 +9,7 @@ from tqdm import tqdm
 import os
 import numpy as np
 import MinkowskiEngine as ME
+from line_profiler import LineProfiler
 
 from utils import config_parser, write_parser
 from Model.model import AutoEncoder
@@ -30,7 +31,7 @@ class Trainer():
         self.logger.info(model)
         self.load_state_dict()
         self.epoch = 0
-        self.record_set = {'bce':[], 'res_bpp':[], 'sum_loss':[], 'metrics':[], 'res':[]}
+        self.record_set = {'bce':[], 'res_bpp':[], 'sum_loss':[], 'res':[]}
         self.best_loss = np.inf
 
     def get_logger(self, log_file, level):
@@ -163,19 +164,11 @@ class Trainer():
             bpp = get_bits(out_set['res_likelihood'])/float(float(x_len))
             sum_loss = self.config.alpha * bce + bpp
 
-            metrics = [] 
-            for out_cls, ground_truth in zip(out_set['out_cls_list_time'], out_set['ground_truth_list_time']):
-                metrics.append(get_metrics(out_cls, ground_truth))
-            for i in range(args.frame_num):
-                for out_cls, ground_truth in zip(out_set['out_cls_list_space'][i], out_set['ground_truth_list_space'][i]):
-                    metrics.append(get_metrics(out_cls, ground_truth))
-
             res_mean = torch.abs(out_set['res_prior'].F).detach().cpu()
             # record
             self.record_set['bce'].append(bce.item())
             self.record_set['res_bpp'].append(bpp.item())
             self.record_set['sum_loss'].append(sum_loss.item())
-            self.record_set['metrics'].append(metrics)
             self.record_set['res'].append(res_mean)
             torch.cuda.empty_cache()# empty cache.
 
@@ -188,7 +181,7 @@ class Trainer():
         self.epoch += 1
 
         return
-        
+
     def train(self, dataloader, main_tag='Train'):
         #adjust RD coefficient
         if(self.epoch < 5):
@@ -240,16 +233,9 @@ class Trainer():
 
             # metric & record
             with torch.no_grad():
-                metrics = []
-                for out_cls, ground_truth in zip(out_set['out_cls_list_time'], out_set['ground_truth_list_time']):
-                    metrics.append(get_metrics(out_cls, ground_truth))
-                for i in range(args.frame_num):
-                    for out_cls, ground_truth in zip(out_set['out_cls_list_space'][i], out_set['ground_truth_list_space'][i]):
-                        metrics.append(get_metrics(out_cls, ground_truth))
                 self.record_set['bce'].append(bce.item())
                 self.record_set['res_bpp'].append(bpp.item())
                 self.record_set['sum_loss'].append(sum_loss.item())
-                self.record_set['metrics'].append(metrics)
                 self.record_set['res'].append(0)
                 if(self.epoch%self.config.log_freq==0 and batch_step==len(dataloader)):
                     self.record(main_tag=main_tag, global_step=global_step)
