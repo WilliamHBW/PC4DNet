@@ -77,7 +77,7 @@ if  __name__ == '__main__':
     cfg_dic['seq_name'] = 'exercise_vox11 basketball_player_vox11 dancer_vox11 model_vox11'
     #cfg_dic['seq_name'] = 'basketball_player_vox11'
     cfg_dic['data_dir'] = '/home/mmspg/Desktop/test_files/Owlii'
-    cfg_dic['cfg_name'] = 'train3'
+    cfg_dic['cfg_name'] = 'train2'
     cfg_dic['out_filetype'] = 'h5'
     cfg_dic['frame_num'] = '600'
     cfg_dic['group_num'] = '8' #frame group length

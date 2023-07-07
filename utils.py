@@ -47,8 +47,8 @@ def load_ply_sparse(coords, device):
     coords_list = [coords]
     feats_list = [feats]
     coords_batch, feats_batch = ME.utils.sparse_collate(coords_list, feats_list)
-    x = ME.SparseTensor(features=feats_batch.float(), coordinates=coords_batch.int(), device=device)
-    return x
+    #x = ME.SparseTensor(features=feats_batch.float(), coordinates=coords_batch.int(), device=device)
+    return coords_batch
 
 def number_in_line(line):
     wordlist = line.split(' ')

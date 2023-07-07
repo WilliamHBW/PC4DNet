@@ -237,12 +237,11 @@ class Trainer():
                 self.record_set['res_bpp'].append(bpp.item())
                 self.record_set['sum_loss'].append(sum_loss.item())
                 self.record_set['res'].append(0)
-                if(self.epoch%self.config.log_freq==0 and batch_step==len(dataloader)):
-                    self.record(main_tag=main_tag, global_step=global_step)
-                    savename = os.path.join(self.config.train_savedir, 'epoch_' + str(self.epoch) + '.pth')
-                    self.save_checkpoint(self.model, self.epoch, self.optimizer, self.scheduler, savename)
             torch.cuda.empty_cache()# empty cache.
 
+        if(self.epoch%self.config.log_freq==0):
+            savename = os.path.join(self.config.train_savedir, 'epoch_' + str(self.epoch) + '.pth')
+            self.save_checkpoint(self.model, self.epoch, self.optimizer, self.scheduler, savename)
         self.record(main_tag=main_tag, global_step=self.epoch*len(dataloader))
         self.scheduler.step()
         

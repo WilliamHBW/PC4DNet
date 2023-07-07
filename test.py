@@ -46,7 +46,8 @@ def test(args, model, filegroup):
     print("="*10,"using 4D PCC")
     print("="*10,"Encoding")
     start_time = time.process_time()
-    _ = coder.encode(ori_x_buffer, resfix=resfix)
+    x = torch.concatenate(ori_x_buffer)
+    _ = coder.encode(x, resfix=resfix)
     time_enc = round(time.process_time() - start_time, 3)
 
     # decode
@@ -106,7 +107,7 @@ if __name__=='__main__':
     write_parser(args, args.test_savedir+'/config.cfg')
 
     model = AutoEncoder(args).to(device)
-    ckpt = torch.load(os.path.join(args.loaddir, 'best.pth'))
+    ckpt = torch.load(os.path.join(args.loaddir, 'epoch_35.pth'))
     model.load_state_dict(ckpt['model'])
 
     test_filelist = os.listdir(args.testdir)

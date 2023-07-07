@@ -76,10 +76,10 @@ class AutoEncoder(torch.nn.Module):
         super().__init__()
         self.frame_num = args.frame_num
 
-        self.spatial_encoder = Feature_extract(dscale=2, channels=[1,8,16,32])
-        self.spatial_decoder = Recons(uscale=2, channels=[32,16,8])
-        self.temporal_encoder = Temporal_Encoder(dscale=[2,2,2,1], channels=[32,16,8], temporal_kernel_size=[3,3,3,3])
-        self.temporal_decoder = Temporal_Decoder(uscale=[2,2,2,1], channels=[8,16,32], temporal_kernel_size=[3,3,3,3])
+        self.spatial_encoder = Feature_extract(dscale=2, channels=[1,16,32,64])
+        self.spatial_decoder = Recons(uscale=2, channels=[64,32,16])
+        self.temporal_encoder = Temporal_Encoder(dscale=[2,2,2,1], channels=[64,32,8], temporal_kernel_size=[2,2,2,3])
+        self.temporal_decoder = Temporal_Decoder(uscale=[2,2,2,1], channels=[8,32,64], temporal_kernel_size=[2,2,2,3])
         self.entropy_bottleneck = EntropyBottleneck(8)
 
     def get_likelihood(self, data, quantize_mode, entropy_model):
@@ -97,7 +97,7 @@ class AutoEncoder(torch.nn.Module):
         ground_truth_list_space = []
         nums_list_space = []
         coords = torch.zeros((1,5)).to(device)
-        feats = torch.zeros((1,32)).to(device)
+        feats = torch.zeros((1,64)).to(device)
         for i in range(self.frame_num):
             x_coord = x[x[:,-1]==i][:,:-1].contiguous()
             x_feat = torch.ones((x_coord.shape[0],1)).to(device)
