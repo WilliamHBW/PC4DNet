@@ -46,8 +46,6 @@ def collate_pointcloud_fn(list_data):
 class PCDataset(Dataset):
     def __init__(self, filedir, frame_num=2, format='h5', mode='train', size_ratio=1):
         self.filedir = filedir
-        self.cache = {}
-        self.last_cache_percent = 0
         self.format = format
         self.frame_num = frame_num
         self.ratio = size_ratio
@@ -67,19 +65,12 @@ class PCDataset(Dataset):
     
     def __getitem__(self, idx):
 
-        if idx in self.cache:
-            tensor = self.cache[idx]
-        else:
-            if self.format=='h5':
-                coords_ = []
-                filepath = os.path.join(self.filedir, self.files[idx])
-                coords_ = read_h5_geo(filepath, self.frame_num)
-            tensor = coords_
-            #cache
-            self.cache[idx] = tensor
-            cache_percent = int((len(self.cache) / len(self)) * 100)
-            if cache_percent > 0 and cache_percent % 10 == 0 and cache_percent != self.last_cache_percent:
-                self.last_cache_percent = cache_percent
+        if self.format=='h5':
+            coords_ = []
+            filepath = os.path.join(self.filedir, self.files[idx])
+            coords_ = read_h5_geo(filepath, self.frame_num)
+        tensor = coords_
+        #cache
 
         return tensor
 
